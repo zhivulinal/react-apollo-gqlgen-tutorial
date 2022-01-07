@@ -1,0 +1,8 @@
+type User {
+    uid:        Int!,
+    username:   String!,
+    active: 	Boolean!,
+    email: 		String!,
+    phone: 		String!,
+    method: 	String!,
+}

@@ -1,0 +1,47 @@
+"""
+Запросы GET
+"""
+type Query {
+
+  """
+  Первый запрос. Необходим для авторизации
+
+  Вызывается при наличии флага Auth.authorized
+
+  1. Если есть Auth.auth_token и Auth.authorized
+  передаем его в HTTP заголовке Authorization
+
+  2. Если есть Auth.client_id
+  передаем в заголовке Client-ID
+  """
+  auth: Auth!
+
+  user: User!
+}
+
+"""
+Запросы POST
+"""
+type Mutation {
+
+  """
+  Метод авторизации.
+  Принимает username
+  Вернет Auth.auth_token, должен быть в
+  HTTP заголовке Authorization
+  при получении токена пользователя
+  """
+  authorization(login: String!): Auth!
+  smsCode(code: String!): Auth!
+}
+
+"""
+Подписки на websocket
+"""
+type Subscription {
+
+  """
+  Подписка на Auth
+  """
+  auth: Auth!
+}
