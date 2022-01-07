@@ -1,17 +1,18 @@
 package main
 
 import (
+	"github.com/99designs/gqlgen/graphql/playground"
 	"log"
 	"net/http"
 	"os"
-	"react-apollo-gqlgen-tutorial/backoffice/graph/generated"
-	graph2 "react-apollo-gqlgen-tutorial/backoffice/pkg/graph"
-
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
+	"react-apollo-gqlgen-tutorial/backoffice/pkg/graph"
+	"github.com/gorilla/mux"
+	"react-apollo-gqlgen-tutorial/backoffice/pkg/middleware"
 )
 
-const defaultPort = "8080"
+var (
+	defaultPort = "2000"
+)
 
 func main() {
 	port := os.Getenv("PORT")
@@ -19,11 +20,18 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph2.Resolver{}}))
+	// Создадим GraphQL сервер
+	srv := graph.NewServer(graph.Options{})
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	// Создадим роутер
+	router := mux.NewRouter()
+
+	// Подключим CORS middleware
+	router.Use(middleware.CorsMiddleware())
+
+	router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+	router.Handle("/graphql", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
