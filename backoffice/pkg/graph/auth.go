@@ -10,7 +10,7 @@ func (r *queryResolver) Auth(ctx context.Context) (*model.Auth, error) {
 }
 
 func (r *subscriptionResolver) Auth(ctx context.Context) (<-chan *model.Auth, error) {
-	return r.store.AuthCreateWebsocket(ctx)
+	return r.store.AuthWebsocket(ctx)
 }
 
 func (r *mutationResolver) Authorization(ctx context.Context, login string) (*model.Auth, error) {

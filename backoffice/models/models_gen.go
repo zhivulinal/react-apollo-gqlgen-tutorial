@@ -20,6 +20,9 @@ type Auth struct {
 }
 
 type Session struct {
+	Sid string `json:"sid"`
+	// Флаг наличия websocket соединения
+	Online bool `json:"online"`
 	// Токен авторизации, должен совпасть с тем
 	// что отдали клиенту при отправке формы авторизации
 	AuthToken string `json:"auth_token"`

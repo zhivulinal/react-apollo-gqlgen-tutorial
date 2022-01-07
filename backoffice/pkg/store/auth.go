@@ -2,18 +2,32 @@ package store
 
 import (
 	"context"
+	"net/http"
 	model "react-apollo-gqlgen-tutorial/backoffice/models"
 )
 
-// Возвращает состояние Auth исходя из текущего контекста
-func (s *Store) Auth(ctx context.Context) (auth *model.Auth, err error) {
-	// ...
+// Вызывается в AuthMiddleware
+// Обрабатывает HTTP заголовки
+// Проводит авторизации клиента и пользователя
+func (s *Store) HandleAuthHTTP(w http.ResponseWriter, r *http.Request) *http.Request {
+
+	// Обработаем сессию клиента
+	r = s.SessionHandleClient(w, r)
+
+	return r
+}
+
+// Авторизовывает websocket
+// Создает сессию
+// Обрабатывает подключение и создает канал
+func (s *Store) AuthWebsocket(ctx context.Context) (out <-chan *model.Auth, err error) {
+
 	return
 }
 
-// Авторизовывает websocket, обрабатывает подключение и создает канал
-func (s *Store) AuthCreateWebsocket(ctx context.Context) (out <-chan *model.Auth, err error) {
-	// ...
+// Возвращает состояние Auth исходя из текущего контекста
+func (s *Store) Auth(ctx context.Context) (auth *model.Auth, err error) {
+
 	return
 }
 
