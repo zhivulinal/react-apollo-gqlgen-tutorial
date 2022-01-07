@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"react-apollo-gqlgen-tutorial/backoffice/graph/generated"
+	"react-apollo-gqlgen-tutorial/backoffice/pkg/store"
 	"time"
 )
 
@@ -15,7 +16,9 @@ var (
 	mb int64 = 1 << 20
 )
 
-type Resolver struct{}
+type Resolver struct{
+	store *store.Store
+}
 
 // Создадим функцию NewServer
 func NewServer(opt Options) *handler.Server {
@@ -24,7 +27,9 @@ func NewServer(opt Options) *handler.Server {
 	srv := handler.New(
 		generated.NewExecutableSchema(
 			generated.Config{
-				Resolvers: &Resolver{},
+				Resolvers: &Resolver{
+					store: opt.Store,
+				},
 			},
 		),
 	)
@@ -52,4 +57,6 @@ func NewServer(opt Options) *handler.Server {
 	return srv
 }
 
-type Options struct {}
+type Options struct {
+	Store *store.Store
+}
