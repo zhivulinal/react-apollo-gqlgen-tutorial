@@ -6,6 +6,19 @@ import (
 	"github.com/google/uuid"
 )
 
+// Получает сессию из контекста
+func SessionFromContext(ctx context.Context) (*Session, error) {
+	if meta := ctx.Value(sessionCtxKey{"session"}); meta != nil {
+		return meta.(*Session), nil
+	}
+	return nil, fmt.Errorf("meta: not found")
+}
+
+// Подтверждает активность клиента
+func (s *Session) CheckOnline() bool {
+	return s.Online
+}
+
 // Создает новую сессию
 func NewSession() *Session {
 	return &Session{
