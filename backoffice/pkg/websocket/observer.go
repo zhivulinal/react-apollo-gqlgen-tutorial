@@ -10,6 +10,36 @@ type observer struct {
 	user chan 	*model.User
 }
 
+// Отправляет сообщение
+func (o *observer) Send(ch interface{}) {
+
+	// Получим тип из интерфейса
+	switch ch.(type) {
+	case *model.Auth:
+
+		// Валидируем канал
+		if o.auth == nil {
+			fmt.Println("Auth sending error")
+			return
+		}
+
+		// Отправляем сообщение
+		o.auth <- ch.(*model.Auth)
+	case *model.User:
+
+		// Валидируем канал
+		if o.user == nil {
+			fmt.Println("User sending error")
+			return
+		}
+
+		// Отправляем сообщение
+		o.user <- ch.(*model.User)
+	default:
+		fmt.Println("unknown message type")
+	}
+}
+
 func (o *observer) Add(ch interface{}) error {
 
 	// Получим тип из интерфейса

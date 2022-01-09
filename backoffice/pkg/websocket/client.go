@@ -10,6 +10,29 @@ type client struct {
 	mu 			sync.Mutex
 }
 
+func (c *client) Send(ch interface{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Необходимо отправить сообщение всем слушателям
+	// Пройдемся в цикле и запустим отправку
+	//
+	// Лучше всего это сделать в отдельной горутине
+
+	// Создадим WaitGroup
+	// Про применение описано в этой статье:
+	// https://habr.com/ru/company/otus/blog/557312/
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		for _, obs := range c.observers {
+			obs.Send(ch)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
 // Добавляет слушателя Клиента
 func (c *client) Add(sid string, ch interface{}) error {
 

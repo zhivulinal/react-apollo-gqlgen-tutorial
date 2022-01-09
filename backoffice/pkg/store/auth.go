@@ -6,6 +6,7 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	model "react-apollo-gqlgen-tutorial/backoffice/models"
+	"time"
 )
 
 // Вызывается в AuthMiddleware
@@ -17,6 +18,27 @@ func (s *Store) HandleAuthHTTP(w http.ResponseWriter, r *http.Request) *http.Req
 	r = s.SessionHandleClient(w, r)
 
 	return r
+}
+
+// Инициирует отправку текущего состояния Auth клиенту
+func (s *Store) SendAuth(ctx context.Context) error {
+
+	// Получим текущее состояние
+	auth, err := s.Auth(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Todo: удалить!!!
+	// Чтобы увидеть результат изменений
+	// Нужно что нибудь рандомное
+	auth.Method = time.Now().String()
+
+	if err = s.websocket.Send(ctx, auth); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Авторизовывает websocket

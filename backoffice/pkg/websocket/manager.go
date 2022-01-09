@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"fmt"
 	model "react-apollo-gqlgen-tutorial/backoffice/models"
 	"sync"
 )
@@ -11,6 +12,31 @@ type Websocket struct {
 
 	// Защищаем мапу
 	mu sync.Mutex
+}
+
+func (w *Websocket) Send(ctx context.Context, ch interface{}) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Получим сессию из контекста
+	sess, err := model.SessionFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Получим ClientID
+	cid := sess.ClientID
+
+	// Найдем клиента
+	cli, ok := w.clients[cid]
+	if !ok {
+		return fmt.Errorf("client not found")
+	}
+
+	// Отправляем сообщение
+	cli.Send(ch)
+
+	return nil
 }
 
 // Создает Клиента
