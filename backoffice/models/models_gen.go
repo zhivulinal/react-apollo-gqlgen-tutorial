@@ -6,8 +6,8 @@ type Auth struct {
 	// Должен быть предъявлен при запросе токена пользователя
 	// Получаем в ответе на GET запрос формы авторизации
 	//
-	// Отправляем в HTTP заголовке Client-ID
-	ClientID string `json:"client_id"`
+	// Отправляем в HTTP заголовке Session-ID
+	SessionID string `json:"sessionId"`
 	// Должен быть предъявлен при запросе токена пользователя
 	// Получаем в ответе на GET запрос формы авторизации
 	//
@@ -21,11 +21,13 @@ type Auth struct {
 
 type Session struct {
 	Sid string `json:"sid"`
+	// Cookie в браузере
+	ClientID string `json:"clientID"`
 	// Флаг наличия websocket соединения
 	Online bool `json:"online"`
 	// Токен авторизации, должен совпасть с тем
 	// что отдали клиенту при отправке формы авторизации
-	AuthToken string `json:"auth_token"`
+	AuthToken string `json:"authToken"`
 	// Идентификатор пользователя
 	UID int `json:"uid"`
 	// Метод авторизации установленный пользователем

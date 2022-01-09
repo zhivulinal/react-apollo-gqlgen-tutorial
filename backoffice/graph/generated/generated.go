@@ -47,8 +47,8 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Auth struct {
 		Authorized func(childComplexity int) int
-		ClientID   func(childComplexity int) int
 		Method     func(childComplexity int) int
+		SessionID  func(childComplexity int) int
 		Token      func(childComplexity int) int
 	}
 
@@ -64,6 +64,7 @@ type ComplexityRoot struct {
 
 	Session struct {
 		AuthToken func(childComplexity int) int
+		ClientID  func(childComplexity int) int
 		Method    func(childComplexity int) int
 		Online    func(childComplexity int) int
 		Sid       func(childComplexity int) int
@@ -72,6 +73,7 @@ type ComplexityRoot struct {
 
 	Subscription struct {
 		Auth func(childComplexity int) int
+		User func(childComplexity int) int
 	}
 
 	User struct {
@@ -94,6 +96,7 @@ type QueryResolver interface {
 }
 type SubscriptionResolver interface {
 	Auth(ctx context.Context) (<-chan *model.Auth, error)
+	User(ctx context.Context) (<-chan *model.User, error)
 }
 
 type executableSchema struct {
@@ -118,19 +121,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Auth.Authorized(childComplexity), true
 
-	case "Auth.client_id":
-		if e.complexity.Auth.ClientID == nil {
-			break
-		}
-
-		return e.complexity.Auth.ClientID(childComplexity), true
-
 	case "Auth.method":
 		if e.complexity.Auth.Method == nil {
 			break
 		}
 
 		return e.complexity.Auth.Method(childComplexity), true
+
+	case "Auth.sessionId":
+		if e.complexity.Auth.SessionID == nil {
+			break
+		}
+
+		return e.complexity.Auth.SessionID(childComplexity), true
 
 	case "Auth.token":
 		if e.complexity.Auth.Token == nil {
@@ -177,12 +180,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.User(childComplexity), true
 
-	case "Session.auth_token":
+	case "Session.authToken":
 		if e.complexity.Session.AuthToken == nil {
 			break
 		}
 
 		return e.complexity.Session.AuthToken(childComplexity), true
+
+	case "Session.clientID":
+		if e.complexity.Session.ClientID == nil {
+			break
+		}
+
+		return e.complexity.Session.ClientID(childComplexity), true
 
 	case "Session.method":
 		if e.complexity.Session.Method == nil {
@@ -218,6 +228,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Subscription.Auth(childComplexity), true
+
+	case "Subscription.user":
+		if e.complexity.Subscription.User == nil {
+			break
+		}
+
+		return e.complexity.Subscription.User(childComplexity), true
 
 	case "User.active":
 		if e.complexity.User.Active == nil {
@@ -348,9 +365,10 @@ var sources = []*ast.Source{
     Должен быть предъявлен при запросе токена пользователя
     Получаем в ответе на GET запрос формы авторизации
 
-    Отправляем в HTTP заголовке Client-ID
+    Отправляем в HTTP заголовке Session-ID
     """
-    client_id:      String!
+    # В прошлых коммитах была ошибка: client_id -> session_id
+    sessionId:      String!
 
     """
     Должен быть предъявлен при запросе токена пользователя
@@ -417,11 +435,17 @@ type Subscription {
   Подписка на Auth
   """
   auth: Auth!
+  user: User!
 }
 `, BuiltIn: false},
 	{Name: "schema/session.graphqls", Input: `type Session {
 
     sid: String!
+
+    """
+    Cookie в браузере
+    """
+    clientID: String!
 
     """
     Флаг наличия websocket соединения
@@ -432,7 +456,7 @@ type Subscription {
     Токен авторизации, должен совпасть с тем
     что отдали клиенту при отправке формы авторизации
     """
-    auth_token: String!
+    authToken: String!
 
     """
     Идентификатор пользователя
@@ -543,7 +567,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Auth_client_id(ctx context.Context, field graphql.CollectedField, obj *model.Auth) (ret graphql.Marshaler) {
+func (ec *executionContext) _Auth_sessionId(ctx context.Context, field graphql.CollectedField, obj *model.Auth) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -561,7 +585,7 @@ func (ec *executionContext) _Auth_client_id(ctx context.Context, field graphql.C
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ClientID, nil
+		return obj.SessionID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -943,6 +967,41 @@ func (ec *executionContext) _Session_sid(ctx context.Context, field graphql.Coll
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Session_clientID(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Session",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ClientID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Session_online(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -978,7 +1037,7 @@ func (ec *executionContext) _Session_online(ctx context.Context, field graphql.C
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Session_auth_token(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
+func (ec *executionContext) _Session_authToken(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1123,6 +1182,51 @@ func (ec *executionContext) _Subscription_auth(ctx context.Context, field graphq
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
 			ec.marshalNAuth2ᚖreactᚑapolloᚑgqlgenᚑtutorialᚋbackofficeᚋmodelsᚐAuth(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
+}
+
+func (ec *executionContext) _Subscription_user(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().User(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-resTmp.(<-chan *model.User)
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNUser2ᚖreactᚑapolloᚑgqlgenᚑtutorialᚋbackofficeᚋmodelsᚐUser(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -2479,8 +2583,8 @@ func (ec *executionContext) _Auth(ctx context.Context, sel ast.SelectionSet, obj
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Auth")
-		case "client_id":
-			out.Values[i] = ec._Auth_client_id(ctx, field, obj)
+		case "sessionId":
+			out.Values[i] = ec._Auth_sessionId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2620,13 +2724,18 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "clientID":
+			out.Values[i] = ec._Session_clientID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "online":
 			out.Values[i] = ec._Session_online(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "auth_token":
-			out.Values[i] = ec._Session_auth_token(ctx, field, obj)
+		case "authToken":
+			out.Values[i] = ec._Session_authToken(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2666,6 +2775,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	switch fields[0].Name {
 	case "auth":
 		return ec._Subscription_auth(ctx, fields[0])
+	case "user":
+		return ec._Subscription_user(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}

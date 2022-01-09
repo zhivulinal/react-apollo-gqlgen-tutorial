@@ -27,7 +27,7 @@ func CorsMiddleware() func(http.Handler) http.Handler {
 			// Подробнее здесь:
 			// https://fetch.spec.whatwg.org/#concept-header
 			w.Header().Set("Access-Control-Allow-Headers",
-				"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+				"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, Session-ID")
 
 			if r.Method == "OPTIONS" {
 				return

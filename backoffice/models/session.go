@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// Привязывает ClientID к сессии
+func (s *Session) AddClientID(cid string) {
+	s.ClientID = cid
+}
+
 // Получает сессию из контекста
 func SessionFromContext(ctx context.Context) (*Session, error) {
 	if meta := ctx.Value(sessionCtxKey{"session"}); meta != nil {
@@ -26,14 +31,8 @@ func NewSession() *Session {
 		// Идентификатором будет UUID
 		// go get github.com/google/uuid
 		// или go mod vendor при указании импорта
-		Sid: uuid.New().String(),
-	}
-}
-
-// Создаст сессию с существующим идентификатором
-func NewSessionWithSid(sid string) *Session {
-	return &Session{
-		Sid: sid,
+		Sid: 		uuid.New().String(),
+		ClientID: 	uuid.New().String(),
 	}
 }
 

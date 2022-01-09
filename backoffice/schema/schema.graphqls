@@ -41,6 +41,12 @@ type Mutation {
 type Subscription {
 
   """
+  Добавлен метод:
+  Подписка на Auth
+  """
+  user: User!
+
+  """
   Подписка на Auth
   """
   auth: Auth!

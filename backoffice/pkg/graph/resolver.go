@@ -49,6 +49,17 @@ func NewServer(opt Options) *handler.Server {
 			WriteBufferSize: 1024,
 		},
 		InitFunc: transport.WebsocketInitFunc(func(ctx context.Context, initPayload transport.InitPayload) (context.Context, error) {
+
+			// Тут обрабатываются websocket соединения
+			// Получим заголовок "Session-ID"
+			if sid, ok := initPayload["Session-ID"]; ok {
+				if sess, err := opt.Store.ValidateSessionToken(sid.(string)); err == nil {
+
+					// Сохраним сессию в контекст
+					ctx = sess.WithContext(ctx)
+				}
+			}
+
 			return ctx, nil
 		}),
 	})

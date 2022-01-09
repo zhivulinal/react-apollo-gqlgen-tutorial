@@ -2,13 +2,14 @@ package main
 
 import (
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
 	"react-apollo-gqlgen-tutorial/backoffice/pkg/graph"
-	"github.com/gorilla/mux"
 	"react-apollo-gqlgen-tutorial/backoffice/pkg/middleware"
 	st "react-apollo-gqlgen-tutorial/backoffice/pkg/store"
+	"react-apollo-gqlgen-tutorial/backoffice/pkg/token"
 )
 
 var (
@@ -16,13 +17,23 @@ var (
 )
 
 func main() {
+	tokenSessID := token.NewJwt(token.JwtOptions{
+		SecretKey: "ololo",
+		Issuer: "example.com",
+		ExpSeconds: 0,
+	})
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
 	// Создадим Store
-	store := st.NewStore(st.Options{})
+	store := st.NewStore(st.Options{
+		Token: st.TokenOptions{
+			SessionID: tokenSessID,
+		},
+	})
 
 	// Создадим GraphQL сервер
 	srv := graph.NewServer(graph.Options{

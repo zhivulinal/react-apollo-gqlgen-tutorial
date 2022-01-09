@@ -3,6 +3,11 @@ type Session {
     sid: String!
 
     """
+    Значение из Cookie в браузере
+    """
+    clientID: String!
+
+    """
     Флаг наличия websocket соединения
     """
     online: Boolean!
@@ -11,7 +16,7 @@ type Session {
     Токен авторизации, должен совпасть с тем
     что отдали клиенту при отправке формы авторизации
     """
-    auth_token: String!
+    authToken: String!
 
     """
     Идентификатор пользователя

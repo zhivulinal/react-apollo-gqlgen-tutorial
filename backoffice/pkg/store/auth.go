@@ -3,11 +3,9 @@ package store
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	model "react-apollo-gqlgen-tutorial/backoffice/models"
-	"time"
 )
 
 // Вызывается в AuthMiddleware
@@ -22,78 +20,53 @@ func (s *Store) HandleAuthHTTP(w http.ResponseWriter, r *http.Request) *http.Req
 }
 
 // Авторизовывает websocket
-// Создает сессию
-// Обрабатывает подключение и создает канал
-//
-// Каждый клиент вызывавший данный
-// метод – является уникальным
-func (r *Store) AuthWebsocket(ctx context.Context) (<-chan *model.Auth, error) {
+func (s *Store) AuthWebsocket(ctx context.Context) (<-chan *model.Auth, error) {
 
-	// Получим сессию из контекста
-	sess, err := model.SessionFromContext(ctx)
+	// Получим текущее состояние авторизации
+	auth, err := s.Auth(ctx)
 	if err != nil {
-
-		// Если произошла ошибка то не стоит здесь
-		// ее отправлять дальше.
-		//
-		// Ее нужно логировать и вернуть на фронт
-		// что-то более обобщенное
-		fmt.Printf("Auth subscriptionResolver. %v", err)
-
+		fmt.Println(err)
 		return nil, gqlerror.Errorf("internal error")
 	}
 
-	// Проверим инициатора запроса.
-	// Если запрос поступил по вебсокет и от Клиента
-	// ранее не имеющего ClientID – не обрабатываем его
-	if ok := sess.CheckOnline(); !ok {
+	// Создаем канал в который будем писать сообщения
+	ch := make(chan *model.Auth)
 
-		// Если клиент не имеет авторизации
-		return nil, gqlerror.Errorf("unauthorized")
+	// Подключим канал к менеджеру websocket
+	err = s.websocket.NewObserver(ctx, ch)
+	if err != nil {
+		fmt.Println(err)
+		return nil, gqlerror.Errorf("internal error")
 	}
 
-	// Подключившийся клиент – уникален
-	// Создадим websocket ID
-	wsid := uuid.New().String()
-
-	// Создаем канал в который будем писать сообщения
-	in := make(chan *model.Auth)
-
-	// Выведем в терминал сообщение при подключении
-	fmt.Printf("WS connect. ID: %v\n", wsid)
-
-	// Обработаем остановку соединения
+	// Нужно вернуть текущее состояние
 	go func() {
-
-		// Чтобы узнать об отключении websocket
-		// достаточно слушать сигнал из контекста
-		<- ctx.Done()
-		fmt.Printf("WS disconnect. ID: %v\n", wsid)
-	}()
-
-	// Тестовая публикация сообщения
-	go func() {
-
-		// Сразу опубликуем сообщение
-		in <- &model.Auth{
-			ClientID: time.Now().String(),
-		}
-
-		// Небольшая задержка и отправим следующее
-		time.Sleep(time.Second * 2)
-		in <- &model.Auth{
-			ClientID: time.Now().String(),
-		}
+		ch <- auth
 	}()
 
 	// Вернем канал
-	return in, nil
+	return ch, nil
 }
 
 // Возвращает состояние Auth исходя из текущего контекста
-func (s *Store) Auth(ctx context.Context) (auth *model.Auth, err error) {
+func (s *Store) Auth(ctx context.Context) (*model.Auth, error) {
 
-	return
+	// создадим модель
+	auth := &model.Auth{}
+
+	// Проверим сессию
+	sid, err := s.ValidateClientSession(ctx)
+	if err != nil {
+		return nil, gqlerror.Errorf("internal error")
+	}
+
+	// Если есть sid – добавим его к Auth
+	if sid != "" {
+		auth.AddSessionId(sid)
+	}
+
+	// Отправим текущее состояние
+	return auth, nil
 }
 
 // Авторизация по Username
