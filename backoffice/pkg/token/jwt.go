@@ -3,7 +3,6 @@ package token
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	model "react-apollo-gqlgen-tutorial/backoffice/models"
 	"time"
 )
 
@@ -14,30 +13,32 @@ type Jwt struct {
 	Expiration int64
 }
 
-// Опции при генерации токена
-type JwtClaims struct {
-
-	// Нужен для обновления токена
-	AccessToken string
-
-	// Прикрепим сессию
-	Sess *model.Session
-
-	jwt.StandardClaims
+func newJwt(opt Options) *Jwt {
+	return &Jwt{
+		SecretKey: 	opt.SecretKey,
+		Issuer: 	opt.Issuer,
+		Expiration: opt.ExpSeconds,
+	}
 }
 
-// Генерация токена
-func (j *Jwt) Generate(opt JwtClaims) (token string, err error) {
+type JwtOptions struct {
+	SecretKey 	string
+	Issuer 		string
+	ExpSeconds 	int64
+}
 
-	// Получим Claims
-	claims := &opt
+func (j *Jwt) Generate(opt Claims) (string, error) {
+	if err := opt.ValidateSession(); err != nil {
+		return "", err
+	}
+
+	// Создадим JwtClaims
+	claims := &JwtClaims{}
+
+	// Добавим Claims к JwtClaims
+	claims.AddClaims(opt)
 
 	// Инициализация StandardClaims
-	//
-	// Здесь "подключаются" все настройки
-	// Необходимые для валидации токена
-	//
-	// Указываются при инициализации структуры Jwt
 	claims.StandardClaims = jwt.StandardClaims{
 		ExpiresAt: time.Now().Local().Add(time.Second * time.Duration(j.Expiration)).Unix(),
 		Issuer:    j.Issuer,
@@ -49,16 +50,13 @@ func (j *Jwt) Generate(opt JwtClaims) (token string, err error) {
 	return t.SignedString([]byte(j.SecretKey))
 }
 
-// Опции при валидации токена
-type JwtValidateOptions struct {
-	Token 	string
-}
-
-// Валидация токена
-func (j *Jwt) Validate(opt JwtValidateOptions) (claims *JwtClaims, err error) {
+func (j *Jwt) Validate(opt ValidateOptions) (*Claims, error) {
+	if opt.Token == "" {
+		return nil, fmt.Errorf("incorrect token")
+	}
 
 	// Попробуем получить полезную нагрузку
-	token, err := jwt.ParseWithClaims(
+	token, _ := jwt.ParseWithClaims(
 		opt.Token,
 		&JwtClaims{},
 		func(token *jwt.Token) (interface{}, error) {
@@ -72,10 +70,27 @@ func (j *Jwt) Validate(opt JwtValidateOptions) (claims *JwtClaims, err error) {
 		return nil, fmt.Errorf("token invalid")
 	}
 
-	// Получим Claims
+	// Пробуем получить Claims
 	claims, ok := token.Claims.(*JwtClaims)
 	if !ok {
-		return nil, fmt.Errorf("error token claims")
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	// Claims должен содержать сессию
+	if err := claims.ValidateSession(); err != nil {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	// Дополнительная валидация из ValidateOptions
+	switch {
+	case opt.Cid != "":
+		if err := claims.ValidateClientID(opt.Cid); err != nil {
+			return nil, err
+		}
+	case opt.AccessToken:
+		if err := claims.ValidateAccessToken(); err != nil {
+			return nil, err
+		}
 	}
 
 	// Проверим срок жизни токена
@@ -83,26 +98,31 @@ func (j *Jwt) Validate(opt JwtValidateOptions) (claims *JwtClaims, err error) {
 
 		// Если токен протух
 		// Вернем полезную нагрузку вместе с ошибкой
-		//
-		// Для дальнейшей валидации:
-		// claims будет содержать AccessToken
-		return claims, fmt.Errorf("token is expired")
+		return claims.GetAccessToken(), fmt.Errorf("token is expired")
 	}
 
-	return claims, nil
+	return claims.GetClaims(), nil
 }
 
-// Опции структуры Jwt
-type JwtOptions struct {
-	SecretKey 	string
-	Issuer 		string
-	ExpSeconds 	int64
+//
+type JwtClaims struct {
+	Claims
+	jwt.StandardClaims
 }
 
-func NewJwt(opt JwtOptions) *Jwt {
-	return &Jwt{
-		SecretKey: 	opt.SecretKey,
-		Issuer: 	opt.Issuer,
-		Expiration: opt.ExpSeconds,
+func (j *JwtClaims) AddClaims(opt Claims) {
+	j.Claims = opt
+}
+
+func (j *JwtClaims) GetClaims() *Claims {
+	return &j.Claims
+}
+
+func (j *JwtClaims) GetAccessToken() *Claims {
+	if j.Claims.AccessToken == "" {
+		return nil
+	}
+	return &Claims{
+		AccessToken: j.Claims.AccessToken,
 	}
 }

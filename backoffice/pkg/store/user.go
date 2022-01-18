@@ -2,19 +2,30 @@ package store
 
 import (
 	"context"
-	"fmt"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	model "react-apollo-gqlgen-tutorial/backoffice/models"
 )
 
 // Вернет User согласно текущего состояния авторизации
 func (s *Store) User(ctx context.Context) (*model.User, error) {
 
-	err := s.SendAuth(ctx)
-	fmt.Println("Запрашиваем Auth из метода User")
-	fmt.Printf("Ошибка: %v\n", err)
+	// Получим сессию
+	sess, err := model.SessionFromContext(ctx)
+	if err != nil {
 
-	// ...
-	return &model.User{
-		Username: "LOLO",
-	}, nil
+		// Если сессию не нашли
+		return nil, gqlerror.Errorf("internal error")
+	}
+
+	uid, err := sess.GetUserId()
+	if err != nil {
+		return &model.User{}, nil
+	}
+
+	user, err := s.repo.User.GetByUid(uid)
+	if err != nil {
+		return &model.User{}, nil
+	}
+
+	return user, nil
 }

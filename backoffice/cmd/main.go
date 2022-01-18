@@ -8,21 +8,33 @@ import (
 	"os"
 	"react-apollo-gqlgen-tutorial/backoffice/pkg/graph"
 	"react-apollo-gqlgen-tutorial/backoffice/pkg/middleware"
-	st "react-apollo-gqlgen-tutorial/backoffice/pkg/store"
 	"react-apollo-gqlgen-tutorial/backoffice/pkg/token"
+	st "react-apollo-gqlgen-tutorial/backoffice/pkg/store"
 )
 
 var (
 	defaultPort = "2000"
+
+	clientSessionToken = token.NewJwt(token.Options{
+		SecretKey: "super-secret-001",
+	})
+	userToken = token.NewJwt(token.Options{
+		SecretKey: "super-secret-002",
+		ExpSeconds: 5,
+	})
+	authToken = token.NewBase64(token.Options{
+		SecretKey: "super-secret-003",
+	})
+	urlToken = token.NewBase64(token.Options{
+		SecretKey: "super-secret-004",
+		ExpSeconds: 5 * 60,
+	})
+	accessToken = token.NewBase64(token.Options{
+		SecretKey: "super-secret-003",
+	})
 )
 
 func main() {
-	tokenSessID := token.NewJwt(token.JwtOptions{
-		SecretKey: "ololo",
-		Issuer: "example.com",
-		ExpSeconds: 0,
-	})
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
@@ -31,7 +43,11 @@ func main() {
 	// Создадим Store
 	store := st.NewStore(st.Options{
 		Token: st.TokenOptions{
-			SessionID: tokenSessID,
+			ClientSession: 	clientSessionToken,
+			AuthToken: 		authToken,
+			UrlToken: 		urlToken,
+			UserToken: 		userToken,
+			AccessToken:	accessToken,
 		},
 	})
 
@@ -53,6 +69,11 @@ func main() {
 
 	router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
 	router.Handle("/graphql", srv)
+
+	// Путь для подтверждения сессии по URL
+	router.HandleFunc("/accept_auth", func(w http.ResponseWriter, r *http.Request) {
+		store.AuthAcceptSessionHandleHTTP(w, r)
+	})
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))

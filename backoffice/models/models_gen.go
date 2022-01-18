@@ -19,21 +19,6 @@ type Auth struct {
 	Method string `json:"method"`
 }
 
-type Session struct {
-	Sid string `json:"sid"`
-	// Cookie в браузере
-	ClientID string `json:"clientID"`
-	// Флаг наличия websocket соединения
-	Online bool `json:"online"`
-	// Токен авторизации, должен совпасть с тем
-	// что отдали клиенту при отправке формы авторизации
-	AuthToken string `json:"authToken"`
-	// Идентификатор пользователя
-	UID int `json:"uid"`
-	// Метод авторизации установленный пользователем
-	Method string `json:"method"`
-}
-
 type User struct {
 	UID      int    `json:"uid"`
 	Username string `json:"username"`
